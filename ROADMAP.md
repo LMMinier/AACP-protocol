@@ -1,17 +1,29 @@
-# AACP Protocol — Roadmap
+# AACP Protocol Roadmap
 
-## v0.2 (target: 2026-Q3)
+## v0.2.0 (planned)
 
-- [ ] RAID benchmark integration
-- [ ] Promptfoo OWASP Agentic suite (ASI01–ASI05) live eval
-- [ ] LLM backend for `llm_detector.py` — OpenAI/Anthropic semantic re-scoring
-- [ ] Fragment reassembly — detect payload-splitting across turns
-- [ ] GitHub Actions CI — lint, test, coverage badge
-- [ ] PyPI publish
+### Benchmarks
+- [ ] RAID benchmark integration (HuggingFace dataset)
+- [ ] Promptfoo live scan: `promptfoo eval --config promptfooconfig.yaml`
+- [ ] PINT indirect injection benchmark
 
-## v0.3 (target: 2026-Q4)
+### Detection
+- [ ] Production LLM backend for `ExternalLLMHook` (OpenAI/Anthropic)
+- [ ] Semantic similarity detection (embedding-based)
+- [ ] Multilingual attack patterns
 
-- [ ] EEG / medical signal context — trust-tier extensions
-- [ ] Streaming support — chunk-level detection
-- [ ] Red-team dashboard — web UI for detection corpus results
-- [ ] Multilingual corpus — French, Chinese, Arabic injection patterns
+### Integrations
+- [ ] CI/CD GitHub Actions workflow
+- [ ] LangSmith tracing integration
+- [ ] OpenTelemetry spans for audit logging
+
+### Distribution
+- [ ] PyPI publish (`pip install aacp-protocol`)
+- [ ] Docker image
+
+## v0.3.0 (planned)
+
+- [ ] ASIC hardware accelerator hook (RFTPU integration)
+- [ ] EEG signal domain adapter
+- [ ] Formal verification of detector logic
+- [ ] Academic paper submission (arXiv)

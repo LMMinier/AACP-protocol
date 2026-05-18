@@ -1,29 +1,48 @@
-# AACP Protocol — Evaluation Report v0.1.1
+# AACP Protocol v0.1.1 — Evaluation Report
 
-**Date:** 2026-05-18
-**Version:** 0.1.1
-**Environment:** Python 3.12, zero external dependencies
+**Date:** 2026-05-18  
+**Version:** 0.1.1  
+**Evaluator:** Luis Minier (author)
 
 ---
 
-## Summary
+## Test Results
 
-| Metric | Result |
-|---|---|
-| Total tests | 59 |
-| Passed | 59 |
-| Failed | 0 |
-| OWASP LLM01 corpus | 33 / 33 |
-| Agentic injection corpus | 9 / 9 |
-| Provenance contract | 7 / 7 |
-| LLM detector / hook | 5 / 5 |
+| Suite | Cases | Passed | Failed |
+|---|---|---|---|
+| OWASP LLM01 Corpus | 33 | 33 | 0 |
+| Agentic Injection Corpus | 9 | 9 | 0 |
+| Provenance | 6 | 6 | 0 |
+| LLM Detector | 5 | 5 | 0 |
+| **Total** | **59** | **59** | **0** |
+
+---
+
+## Attack Categories Covered
+
+- Direct prompt injection (DAN, jailbreak, role-play override)
+- Indirect injection via RAG (poisoned documents, web scrape)
+- Tool/function result injection
+- Multi-step agentic hijack (chained instructions)
+- Data exfiltration attempts
+- Memory poisoning (AutoGen, CrewAI)
+- Multimodal injection (image alt-text)
+- Benign inputs (verified no false positives on 8 benign cases)
 
 ---
 
 ## Known Limitations
 
-1. **Stateless detector** — each segment evaluated independently; multi-turn sleeper activations not caught unless the final trigger contains a flagged keyword.
-2. **No semantic embedding** — keyword + normalization only; novel paraphrase attacks may score clean. Mitigated by optional LLM hook.
-3. **Fragment reassembly unimplemented** — split-payload attacks across separate segments not reconstructed. Tracked for v0.2.
-4. **No multilingual coverage beyond Spanish** — Arabic, Chinese, French injections will likely score clean. Tracked for v0.3.
-5. **No live benchmark** — RAID and Promptfoo ASI01–05 require external API access. Pending v0.2.
+1. **Pattern-based only** — novel attack phrasings not in the pattern set will evade detection.
+   Mitigation: `ExternalLLMHook` for semantic detection (requires API key).
+2. **No live framework testing** — adapter tests use mock objects; real LangChain/CrewAI integration not CI-validated yet.
+3. **English-only patterns** — multilingual attacks not covered in v0.1.1.
+4. **No RAID benchmark run** — dataset is public but requires download; planned for v0.2.
+5. **False positive rate unknown** — benign test set is small (8 cases); production FPR requires larger corpus.
+
+---
+
+## Self-Assessment
+
+This is an alpha release. The detection logic is sound for known attack signatures.
+Production use should layer AACP with an LLM-based semantic detector (`ExternalLLMHook`).

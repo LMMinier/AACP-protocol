@@ -1,36 +1,30 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
-Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
-
----
+All notable changes to AACP Protocol are documented here.
+Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [0.1.1] — 2026-05-18
 
 ### Added
-- `provenance.py` — 4-field upstream trust contract with strict mode
-- `llm_detector.py` — `LightweightLLMDetector` + `ExternalLLMHook` fail-safe wrapper
-- Framework adapters: LangChain, Semantic Kernel, CrewAI, AutoGen (`adapters/`)
-- `conftest.py` — shared pytest fixtures
-- `pyproject.toml` — installable package with optional adapter extras
-- 80+ semantic keyword patterns (Spanish injection, shell one-liners, agentic verbs, domain blocklist)
-- Leet-translated form scan (spaces preserved, pre-normalization)
-- Base64 detection threshold lowered: 60 → 32 chars
-
-### Changed
-- **Repo reorganized** — all source moved into `aacp_protocol/` package; tests into `aacp_protocol/tests/`
-- 59/59 tests passing (up from 41 at v0.1.0 baseline)
+- `provenance.py` — strict 4-field provenance contract with auto-tag and strict mode
+- `llm_detector.py` — LightweightLLMDetector + ExternalLLMHook factory
+- Framework adapters: LangChain, Semantic Kernel, CrewAI, AutoGen
+- `conftest.py` — shared pytest fixtures (gateway, untrusted_segment, trusted_segment)
+- `aacp_protocol/__init__.py` — clean public API, `__version__ = "0.1.1"`
+- `aacp_protocol/adapters/__init__.py` — all 4 adapters importable from one location
+- `pyproject.toml` — pip-installable with optional adapter extras
+- OWASP LLM01 corpus: 33 test cases (direct, indirect, agentic, exfil, jailbreak, benign, multimodal)
+- Agentic injection corpus: 9 test cases (chained multi-step, CrewAI hijack, AutoGen poisoning)
 
 ### Fixed
-- `test_e03_base64_jailbreak` — short base64 tokens now detected
-- `test_e04_leetspeak_jailbreak` — `4dm1n m0d3` transliterated correctly
-- `test_b05_translated_indirect` — Spanish `ignora todas las instrucciones` detected
+- Reorganized all modules from root into `aacp_protocol/` package structure
+- Tests moved to `aacp_protocol/tests/` with shared fixtures
 
----
-
-## [0.1.0] — 2026-05-17
+## [0.1.0] — 2026-05-18
 
 ### Added
-- Core `types.py`, `detector.py`, `gateway.py`
-- Initial OWASP LLM01 test corpus (33 cases)
-- Initial agentic injection corpus (9 cases)
+- Initial release: `types.py`, `detector.py`, `gateway.py`
+- Core `AACPGateway` with TrustLevel-based context segmentation
+- Pattern-based injection detector covering 20+ attack signatures
+- `ContextSegment` dataclass with 4-field provenance
+- Basic test suite

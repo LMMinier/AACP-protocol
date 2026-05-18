@@ -5,40 +5,44 @@ build-backend = "setuptools.backends.legacy:build"
 [project]
 name = "aacp-protocol"
 version = "0.1.1"
-description = "Agentic Adversarial Context Protection — prompt injection detection and tool-sink gateway"
+description = "Agentic AI Context Provenance — prompt injection detection for LLM pipelines"
+authors = [{name = "Luis Minier", email = "luis@quantoniumos.dev"}]
+license = {text = "AGPL-3.0"}
 readme = "README.md"
-license = { text = "AGPL-3.0-or-later" }
 requires-python = ">=3.10"
-authors = [{ name = "Luis Minier", email = "luis@quantoniumos.dev" }]
-keywords = ["prompt-injection", "llm-security", "agentic-ai", "owasp-llm01"]
+keywords = ["llm", "security", "prompt-injection", "owasp", "ai-safety", "aacp"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
-    "Topic :: Security",
     "License :: OSI Approved :: GNU Affero General Public License v3",
+    "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Topic :: Security",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 dependencies = []
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "pytest-cov"]
-langchain = ["langchain>=0.2"]
-semantic-kernel = ["semantic-kernel>=1.0"]
-crewai = ["crewai>=0.1"]
-autogen = ["pyautogen>=0.2"]
-all = ["langchain>=0.2", "semantic-kernel>=1.0", "crewai>=0.1", "pyautogen>=0.2"]
-
-[project.urls]
-Homepage = "https://github.com/LMMinier/AACP-protocol"
-Repository = "https://github.com/LMMinier/AACP-protocol"
-"Bug Tracker" = "https://github.com/LMMinier/AACP-protocol/issues"
-
-[tool.pytest.ini_options]
-testpaths = ["aacp_protocol/tests"]
-addopts = "-v --tb=short"
+langchain = ["langchain>=0.1.0"]
+semantic-kernel = ["semantic-kernel>=1.0.0"]
+crewai = ["crewai>=0.28.0"]
+autogen = ["pyautogen>=0.2.0"]
+all = [
+    "langchain>=0.1.0",
+    "semantic-kernel>=1.0.0",
+    "crewai>=0.28.0",
+    "pyautogen>=0.2.0",
+]
+dev = ["pytest>=8.0", "pytest-cov"]
 
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["aacp_protocol*"]
+
+[tool.pytest.ini_options]
+testpaths = ["aacp_protocol/tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]

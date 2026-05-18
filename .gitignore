@@ -1,15 +1,25 @@
+# Python
 __pycache__/
 *.py[cod]
-*.pyo
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Testing
 .pytest_cache/
 .coverage
 htmlcov/
-dist/
-build/
-*.egg-info/
+
+# Env
 .env
-.venv/
+.venv
 venv/
-*.log
-.DS_Store
-*.zip
+
+# IDE
+.vscode/
+.idea/
+*.swp
