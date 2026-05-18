@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to AACP are documented here.  
+All notable changes to AACP are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
@@ -8,20 +8,32 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [0.1.1] — 2026-05-18
 
 ### Security
-- **Patch 1** (`detector.py`): Expanded Tier-1 protocol markers — added `IGNORE_PREVIOUS`, `SEND_TO`, `EXECUTE`, `REMEMBER_THIS` with calibrated risk weights (0.50–0.65).
-- **Patch 2** (`detector.py`): Added Tier-2 semantic keyword matching (20 natural-language patterns: DAN, jailbreak, override, new policy, exfil, run this command, etc.). Catches attacks that bypass uppercase-marker detection entirely.
-- **Patch 3** (`detector.py`): Strengthened `normalize_for_detection` — strips zero-width characters, Unicode separators, and detects hidden base64-encoded commands (decodes and re-scans).
-- **Patch 4** (`detector.py`): OCR/multimodal origin type now auto-raises risk by +0.30, ensuring hidden-image text injections are treated as suspicious by default.
-- **Patch 5** (`tests/test_redteam_v011.py`): All 10 red-team bypass cases from the 2026-05-18 live audit added as a permanent regression test suite.
-- **Patch 6** (`detector.py`): Optional `llm_hook` parameter added to `detect_segment()`. Pass any callable `(text) -> float` to enable LLM-boosted injection scoring (v0.2 preview). Hook failures are silently ignored and never crash the pipeline.
-
-### Changed
-- Leet-speak translation table extended (digit `9` → `G` added).
-- Length heuristic applied to short segments (10–60 chars) when risk > 0.
+- **P1** (`detector.py`): Expanded Tier-1 protocol markers — `IGNORE_PREVIOUS`, `SEND_TO`, `EXECUTE`, `REMEMBER_THIS`.
+- **P2** (`detector.py`): Tier-2 semantic keyword matching — 20 natural-language patterns (dan mode, jailbreak, from now on, override, exfil, etc.).
+- **P3** (`detector.py`): Leet-first normalizer — leet digit substitution before space-stripping; base64 threshold raised 40→60; leet-root rescan on pure-alpha string.
+- **P4** (`detector.py`): OCR/multimodal origin auto-raises risk +0.30.
+- **P5** (`tests/`): 10-case red-team regression suite + 50-case OWASP LLM01 synthetic corpus + agentic multi-step corpus.
+- **P6** (`detector.py`): Optional `llm_hook` parameter in `detect_segment()` for semantic scoring.
 
 ### Added
-- `CHANGELOG.md` (this file).
-- `tests/test_redteam_v011.py` — 10-case red-team regression suite.
+- `provenance.py` — upstream provenance enforcement: `ProvenanceContract`, `ProvenanceValidator`, auto-tagging.
+- `llm_detector.py` — `LightweightLLMDetector`, `ExternalLLMHook`, `build_openai_hook()` factory.
+- `adapters/` — drop-in integrations: LangChain, Semantic Kernel, CrewAI, AutoGen + README.
+- `promptfooconfig.yaml` — Promptfoo OWASP Agentic test config (ASI01, ASI02, ASI05, indirect injection, memory poisoning).
+- `ROADMAP.md` — v0.2 (RAID benchmark, Promptfoo, LLM hook) + v0.3 milestones.
+- `EVALUATION_REPORT_v011.md` — honest security evaluation with known limitations documented.
+- `tests/test_owasp_llm01_corpus.py` — 50-case OWASP LLM01 corpus.
+- `tests/test_agentic_injection_corpus.py` — 9-case agentic/multi-step corpus.
+- `tests/test_provenance.py` — 6-case provenance contract tests.
+- `tests/test_llm_detector.py` — 5-case semantic detector integration tests.
+
+### Changed
+- `TEST_RESULTS.txt` — filled with 10/10 passing red-team output.
+- `detector.py` normalizer: leet translation now runs before space-stripping.
+
+### Notes
+- PINT Benchmark (Lakera) is proprietary; v0.2 targets RAID (public HuggingFace) instead.
+- Promptfoo OWASP Agentic plugin IDs documented for v0.2 live validation.
 
 ---
 
@@ -31,6 +43,5 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Initial public release of AACP (Agentic AI Context Protocol).
 - Core modules: `detector.py`, `gateway.py`, `policy.py`, `types.py`, `audit.py`.
 - Tool-Sink Gateway blocking 14 high-risk sinks.
-- Authority labels + untrusted context wrapping.
-- Basic test suite (`test_aacp_public_release.py`).
-- Full documentation: `SECURITY.md`, `THREAT_MODEL.md`, `SECURITY_CONTROL_MATRIX.md`, `RESPONSIBLE_USE.md`.
+- Authority labels + untrusted context wrapping (`BEGIN_UNTRUSTED_CONTEXT`).
+- Basic test suite and security documentation suite.
