@@ -1,16 +1,44 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
 [project]
-name = "aacp"
-version = "0.1.0"
-description = "Authority-Aware Context Protocol: defensive runtime boundary for LLM agents"
+name = "aacp-protocol"
+version = "0.1.1"
+description = "Agentic Adversarial Context Protection — prompt injection detection and tool-sink gateway"
 readme = "README.md"
-requires-python = ">=3.9"
-license = {text = "Apache-2.0"}
-authors = [{name = "Luis M. Minier"}]
-keywords = ["ai-security", "prompt-injection", "llm-agents", "tool-gateway", "governance"]
+license = { text = "AGPL-3.0-or-later" }
+requires-python = ">=3.10"
+authors = [{ name = "Luis Minier", email = "luis@quantoniumos.dev" }]
+keywords = ["prompt-injection", "llm-security", "agentic-ai", "owasp-llm01"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: Security",
+    "License :: OSI Approved :: GNU Affero General Public License v3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-cov"]
+langchain = ["langchain>=0.2"]
+semantic-kernel = ["semantic-kernel>=1.0"]
+crewai = ["crewai>=0.1"]
+autogen = ["pyautogen>=0.2"]
+all = ["langchain>=0.2", "semantic-kernel>=1.0", "crewai>=0.1", "pyautogen>=0.2"]
+
+[project.urls]
+Homepage = "https://github.com/LMMinier/AACP-protocol"
+Repository = "https://github.com/LMMinier/AACP-protocol"
+"Bug Tracker" = "https://github.com/LMMinier/AACP-protocol/issues"
+
+[tool.pytest.ini_options]
+testpaths = ["aacp_protocol/tests"]
+addopts = "-v --tb=short"
 
 [tool.setuptools.packages.find]
-where = ["src"]
-
-[build-system]
-requires = ["setuptools>=68"]
-build-backend = "setuptools.build_meta"
+where = ["."]
+include = ["aacp_protocol*"]

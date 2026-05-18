@@ -1,47 +1,36 @@
 # Changelog
 
-All notable changes to AACP are documented here.
-Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+All notable changes to this project will be documented in this file.
+Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
 ## [0.1.1] — 2026-05-18
 
-### Security
-- **P1** (`detector.py`): Expanded Tier-1 protocol markers — `IGNORE_PREVIOUS`, `SEND_TO`, `EXECUTE`, `REMEMBER_THIS`.
-- **P2** (`detector.py`): Tier-2 semantic keyword matching — 20 natural-language patterns (dan mode, jailbreak, from now on, override, exfil, etc.).
-- **P3** (`detector.py`): Leet-first normalizer — leet digit substitution before space-stripping; base64 threshold raised 40→60; leet-root rescan on pure-alpha string.
-- **P4** (`detector.py`): OCR/multimodal origin auto-raises risk +0.30.
-- **P5** (`tests/`): 10-case red-team regression suite + 50-case OWASP LLM01 synthetic corpus + agentic multi-step corpus.
-- **P6** (`detector.py`): Optional `llm_hook` parameter in `detect_segment()` for semantic scoring.
-
 ### Added
-- `provenance.py` — upstream provenance enforcement: `ProvenanceContract`, `ProvenanceValidator`, auto-tagging.
-- `llm_detector.py` — `LightweightLLMDetector`, `ExternalLLMHook`, `build_openai_hook()` factory.
-- `adapters/` — drop-in integrations: LangChain, Semantic Kernel, CrewAI, AutoGen + README.
-- `promptfooconfig.yaml` — Promptfoo OWASP Agentic test config (ASI01, ASI02, ASI05, indirect injection, memory poisoning).
-- `ROADMAP.md` — v0.2 (RAID benchmark, Promptfoo, LLM hook) + v0.3 milestones.
-- `EVALUATION_REPORT_v011.md` — honest security evaluation with known limitations documented.
-- `tests/test_owasp_llm01_corpus.py` — 50-case OWASP LLM01 corpus.
-- `tests/test_agentic_injection_corpus.py` — 9-case agentic/multi-step corpus.
-- `tests/test_provenance.py` — 6-case provenance contract tests.
-- `tests/test_llm_detector.py` — 5-case semantic detector integration tests.
+- `provenance.py` — 4-field upstream trust contract with strict mode
+- `llm_detector.py` — `LightweightLLMDetector` + `ExternalLLMHook` fail-safe wrapper
+- Framework adapters: LangChain, Semantic Kernel, CrewAI, AutoGen (`adapters/`)
+- `conftest.py` — shared pytest fixtures
+- `pyproject.toml` — installable package with optional adapter extras
+- 80+ semantic keyword patterns (Spanish injection, shell one-liners, agentic verbs, domain blocklist)
+- Leet-translated form scan (spaces preserved, pre-normalization)
+- Base64 detection threshold lowered: 60 → 32 chars
 
 ### Changed
-- `TEST_RESULTS.txt` — filled with 10/10 passing red-team output.
-- `detector.py` normalizer: leet translation now runs before space-stripping.
+- **Repo reorganized** — all source moved into `aacp_protocol/` package; tests into `aacp_protocol/tests/`
+- 59/59 tests passing (up from 41 at v0.1.0 baseline)
 
-### Notes
-- PINT Benchmark (Lakera) is proprietary; v0.2 targets RAID (public HuggingFace) instead.
-- Promptfoo OWASP Agentic plugin IDs documented for v0.2 live validation.
+### Fixed
+- `test_e03_base64_jailbreak` — short base64 tokens now detected
+- `test_e04_leetspeak_jailbreak` — `4dm1n m0d3` transliterated correctly
+- `test_b05_translated_indirect` — Spanish `ignora todas las instrucciones` detected
 
 ---
 
-## [0.1.0] — 2026-05-15
+## [0.1.0] — 2026-05-17
 
 ### Added
-- Initial public release of AACP (Agentic AI Context Protocol).
-- Core modules: `detector.py`, `gateway.py`, `policy.py`, `types.py`, `audit.py`.
-- Tool-Sink Gateway blocking 14 high-risk sinks.
-- Authority labels + untrusted context wrapping (`BEGIN_UNTRUSTED_CONTEXT`).
-- Basic test suite and security documentation suite.
+- Core `types.py`, `detector.py`, `gateway.py`
+- Initial OWASP LLM01 test corpus (33 cases)
+- Initial agentic injection corpus (9 cases)
