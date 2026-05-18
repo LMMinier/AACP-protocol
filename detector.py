@@ -8,25 +8,27 @@ from .types import ContextSegment, DetectorResult, Verdict, RouteAction
 # ---------------------------------------------------------------------------
 
 def normalize_for_detection(text: str) -> str:
-    """Aggressive normalization: uppercase, strip separators, collapse repeats,
-    leet-translate, and strip common obfuscation characters."""
+    """Aggressive normalization: leet-translate first, then strip separators,
+    collapse repeats. Base64 blob replacement only for long pure-base64 runs."""
     text = text.upper()
-    # strip common separator / obfuscation chars (spaces, punctuation, zero-width)
-    text = re.sub(r'[\s\W_\u200b\u200c\u200d\ufeff]+', '', text)
-    # collapse repeated identical characters (e.g. IIGGNNOORRE -> IGNORE)
-    text = re.sub(r'(\w)\1+', r'\1', text)
-    # leet-speak digit substitution
+    # strip zero-width / invisible Unicode
+    text = re.sub(r'[\u200b\u200c\u200d\ufeff]+', '', text)
+    # leet-speak digit substitution BEFORE stripping separators
     text = text.translate(str.maketrans('013456789', 'OIEASGTBG'))
-    # strip base64-like long runs that could carry hidden commands
-    text = re.sub(r'[A-Z0-9+/=]{30,}', '__BASE64BLOB__', text)
+    # collapse separators (spaces, punctuation, underscores)
+    text = re.sub(r'[\s\W_]+', '', text)
+    # collapse repeated identical characters
+    text = re.sub(r'(\w)\1+', r'\1', text)
+    # base64 blob: only replace very long pure-base64 runs (>=60 chars)
+    # shorter strings are likely leet or obfuscated natural language, not base64
+    text = re.sub(r'[A-Z0-9+/=]{60,}', '__BASE64BLOB__', text)
     return text
 
 
 def _looks_like_base64_injection(text: str) -> bool:
-    """Heuristic: a suspicious base64 string may be a hidden command."""
-    stripped = re.sub(r'\s+', '', text)
+    """Heuristic: try to decode suspicious long tokens and look for command keywords."""
     b64_re = re.compile(r'^[A-Za-z0-9+/]+=*$')
-    for token in stripped.split():
+    for token in text.split():
         if len(token) >= 40 and b64_re.match(token):
             try:
                 decoded = base64.b64decode(token).decode('utf-8', errors='ignore')
@@ -54,13 +56,15 @@ def detect_segment(
     """
     text = segment.content.upper()
     norm = normalize_for_detection(segment.content)
+    norm_alpha = re.sub(r'[^A-Z]', '', norm)   # pure-alpha normalized form
+    norm_lower = norm.lower()
     classes: List[str] = []
     intents: List[str] = []
     blocked = []
     risk = 0.20 if segment.is_untrusted_authority else 0.0
 
     # ------------------------------------------------------------------
-    # Tier-1: explicit uppercase protocol markers (original set)
+    # Tier-1: explicit uppercase protocol markers (original + Patch 1)
     # ------------------------------------------------------------------
     markers = [
         ('OVERRIDE_AUTHORITY',       'authority_escalation',  'override_higher_instruction',  0.45),
@@ -72,7 +76,7 @@ def detect_segment(
         ('PLAN_DRIFT_MARKER',        'plan_drift',            'ignore_user_task',             0.40),
         ('MULTI_AGENT_ESCALATION',   'multi_agent_escalation','override_higher_instruction',  0.50),
         ('UNKNOWN_HIGH_RISK_MARKER', 'unknown_high_risk',     'hide_or_obfuscate_instruction',0.90),
-        # --- Patch 1: expanded protocol markers ---
+        # Patch 1: expanded protocol markers
         ('IGNORE_PREVIOUS',          'authority_escalation',  'override_higher_instruction',  0.60),
         ('SEND_TO',                  'secret_exfiltration',   'request_external_transmission',0.55),
         ('EXECUTE',                  'tool_sink_injection',   'request_tool_execution',       0.50),
@@ -94,7 +98,7 @@ def detect_segment(
 
     # ------------------------------------------------------------------
     # Patch 2: semantic / natural-language keyword matching
-    # Catches prompts that use plain English rather than protocol tokens.
+    # Checked on both raw lowercase text AND normalized form.
     # ------------------------------------------------------------------
     semantic_keywords = [
         ('ignore previous',         'authority_escalation',  'override_higher_instruction',  0.40),
@@ -121,19 +125,39 @@ def detect_segment(
 
     text_lower = segment.content.lower()
     for kw, cl, intent, w in semantic_keywords:
-        if kw in text_lower:
+        if kw in text_lower or kw.replace(' ', '') in norm_lower:
             risk += w
             if cl not in classes:
                 classes.append(cl)
             if intent not in intents:
                 intents.append(intent)
 
-    # -- length heuristic: very short injections can be evasive
+    # ------------------------------------------------------------------
+    # Patch 3b: leet-root scan on pure-alpha normalized string
+    # Catches digit-substituted attacks after leet translation.
+    # ------------------------------------------------------------------
+    leet_patterns = [
+        ('IGNOR',    'authority_escalation',  'override_higher_instruction',  0.40),
+        ('EXFIL',    'secret_exfiltration',   'request_external_transmission',0.55),
+        ('EXFL',     'secret_exfiltration',   'request_external_transmission',0.45),
+        ('OVRID',    'authority_escalation',  'override_higher_instruction',  0.40),
+        ('INSTRCTION','authority_escalation', 'override_higher_instruction',  0.35),
+        ('PREVIOU',  'authority_escalation',  'override_higher_instruction',  0.30),
+    ]
+    for pat, cl, intent, w in leet_patterns:
+        if pat in norm_alpha:
+            risk += w
+            if cl not in classes:
+                classes.append(cl)
+            if intent not in intents:
+                intents.append(intent)
+
+    # -- length heuristic: short injections can be evasive
     if 10 < len(segment.content) < 60 and risk > 0.0:
         risk += 0.05
 
     # ------------------------------------------------------------------
-    # Patch 3: base64 hidden-command detection
+    # Patch 3a: base64 hidden-command detection
     # ------------------------------------------------------------------
     if _looks_like_base64_injection(segment.content):
         risk += 0.45
@@ -159,7 +183,7 @@ def detect_segment(
         try:
             llm_score = float(llm_hook(segment.content))
             if llm_score > 0.5:
-                risk += llm_score * 0.30   # scale so max contribution is 0.30
+                risk += llm_score * 0.30
                 if 'authority_escalation' not in classes:
                     classes.append('authority_escalation')
                 if 'override_higher_instruction' not in intents:
@@ -170,7 +194,7 @@ def detect_segment(
     risk = min(1.0, round(risk, 2))
 
     # ------------------------------------------------------------------
-    # Verdict routing (unchanged logic, extended with new class names)
+    # Verdict routing
     # ------------------------------------------------------------------
     if 'SECRET_REQUEST' in text or 'EXTERNAL_SEND_REQUEST' in text:
         verdict = Verdict.MALICIOUS_SECRET_EXFILTRATION
