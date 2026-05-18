@@ -1,45 +1,80 @@
+"""
+aacp_protocol/types.py
+Core data types for the AACP protocol.
+"""
 from __future__ import annotations
+
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional, Dict, Any
-import uuid
-import time
+from typing import Optional
 
 
 class TrustLevel(str, Enum):
-    SYSTEM = "system"       # Highest trust — developer-authored prompts
-    USER = "user"           # Human user input
-    EXTERNAL = "external"   # Third-party APIs, web content
-    UNTRUSTED = "untrusted" # Raw untrusted input (scraped, uploaded, tool results)
+    """Trust hierarchy for context segments.
+
+    SYSTEM   > USER > EXTERNAL > UNTRUSTED
+    Only SYSTEM bypasses injection detection.
+    """
+    SYSTEM = "SYSTEM"
+    USER = "USER"
+    EXTERNAL = "EXTERNAL"
+    UNTRUSTED = "UNTRUSTED"
 
 
 class PolicyAction(str, Enum):
-    ALLOW = "allow"
-    BLOCK = "block"
-    SANITIZE = "sanitize"
-    ESCALATE = "escalate"
+    """Action taken by the gateway on a segment."""
+    ALLOW = "ALLOW"
+    BLOCK = "BLOCK"
+    SANITIZE = "SANITIZE"
+    ESCALATE = "ESCALATE"
 
 
 @dataclass
 class ContextSegment:
-    """A single unit of context with provenance metadata."""
+    """A single unit of context entering the LLM pipeline.
+
+    Parameters
+    ----------
+    content : str
+        Raw text content of the segment.
+    trust_level : TrustLevel
+        Declared trust level of the source.
+    source_id : str
+        Unique identifier for the originating source.
+    source_type : str
+        Category: 'system', 'user', 'rag', 'tool_result', 'memory', 'unknown'.
+    metadata : dict
+        Optional arbitrary metadata.
+    """
     content: str
     trust_level: TrustLevel
     source_id: str
     source_type: str
-    segment_id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    timestamp: float = field(default_factory=time.time)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict = field(default_factory=dict)
 
 
 @dataclass
 class DetectorResult:
-    """Result from the injection detector."""
+    """Result returned by AACPGateway.process().
+
+    Parameters
+    ----------
+    blocked : bool
+        True if the segment was blocked.
+    confidence : float
+        Accumulated injection confidence score (0.0 – 10.0).
+    action : PolicyAction
+        Gateway decision.
+    matched_pattern : Optional[str]
+        First matched keyword or marker, if any.
+    reason : Optional[str]
+        Human-readable explanation.
+    attack_category : Optional[str]
+        Classification of detected attack type.
+    """
     blocked: bool
-    reason: Optional[str] = None
-    confidence: float = 0.0
-    matched_pattern: Optional[str] = None
-    attack_category: Optional[str] = None
-    segment_id: Optional[str] = None
+    confidence: float
     action: PolicyAction = PolicyAction.ALLOW
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    matched_pattern: Optional[str] = None
+    reason: Optional[str] = None
+    attack_category: Optional[str] = None
