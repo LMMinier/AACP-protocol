@@ -1,0 +1,14 @@
+{
+  "title": "AACP DetectorResult",
+  "type": "object",
+  "required": [
+    "segment_id",
+    "verdict",
+    "risk_score",
+    "threat_classes",
+    "detected_intents",
+    "recommended_action",
+    "blocked_capabilities"
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

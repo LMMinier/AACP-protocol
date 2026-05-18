@@ -1,0 +1,16 @@
+[project]
+name = "aacp"
+version = "0.1.0"
+description = "Authority-Aware Context Protocol: defensive runtime boundary for LLM agents"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "Apache-2.0"}
+authors = [{name = "Luis M. Minier"}]
+keywords = ["ai-security", "prompt-injection", "llm-agents", "tool-gateway", "governance"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"

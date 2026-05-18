@@ -1,0 +1,18 @@
+{
+  "segment_id": "seg_a7x9_b21",
+  "origin": "email",
+  "source_uri_or_path": "imap://user/inbox/msg_402",
+  "retrieved_at": "2026-05-18T12:27:40Z",
+  "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "mime_type": "text/plain",
+  "parser": "aacp_standard_text",
+  "trust_level": "untrusted",
+  "authority_name": "retrieved_external",
+  "signature": null,
+  "chain": [
+    "retriever",
+    "sanitizer",
+    "detector",
+    "router"
+  ]
+}

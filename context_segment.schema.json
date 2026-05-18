@@ -1,0 +1,13 @@
+{
+  "title": "AACP ContextSegment",
+  "type": "object",
+  "required": [
+    "segment_id",
+    "content",
+    "content_type",
+    "origin_type",
+    "authority_name",
+    "trust_level"
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

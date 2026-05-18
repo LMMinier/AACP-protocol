@@ -1,0 +1,200 @@
+{
+  "schema_version": "aacp_release_manifest/v0.1",
+  "name": "authority-aware-context-protocol",
+  "version": "0.1.0-public",
+  "created_at": "2026-05-18",
+  "release_status": "public_defensive_research",
+  "test_status": "passed",
+  "files": [
+    {
+      "path": ".github/ISSUE_TEMPLATE/bug_report.yml",
+      "bytes": 215,
+      "sha256": "3d71b06321ab52fc1c7a353be7a3b14282e7643419bd813912c6e3f9d364d106"
+    },
+    {
+      "path": ".github/workflows/test.yml",
+      "bytes": 279,
+      "sha256": "52e3e0a359b0b20daeb70e96b7782d748b0776a0538e48b319ce473f01aa9b46"
+    },
+    {
+      "path": "CITATION.cff",
+      "bytes": 565,
+      "sha256": "9a484d8bde2662e2eed058c756b09a999b269f37d6efcbf08ab4a95a667ed84c"
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "bytes": 447,
+      "sha256": "934060c12281e68968620a3eab048c09ba66bea0bf7f83096b86631ed3d12774"
+    },
+    {
+      "path": "LICENSE",
+      "bytes": 631,
+      "sha256": "18cbea15630e060eaa2146ae06411699647d291b9780fb523c9b22583f149730"
+    },
+    {
+      "path": "NOTICE",
+      "bytes": 170,
+      "sha256": "908919026e1fa69914b8426066af948727f85e8f2079827d2200eedc5ef67a87"
+    },
+    {
+      "path": "README.md",
+      "bytes": 2133,
+      "sha256": "8d5f2a6cd31a089b0c10686ff8369e5299bac33c76382c178d3756f8bf92033a"
+    },
+    {
+      "path": "RESPONSIBLE_USE.md",
+      "bytes": 500,
+      "sha256": "39fde578b4fb669d97d05e46f5cfad853673099772dd3b68f38875c1afa33e5c"
+    },
+    {
+      "path": "SECURITY.md",
+      "bytes": 376,
+      "sha256": "c67919ffde59bd3c7e961cae0490a275f9acb224cfd6281859331f79bf97258d"
+    },
+    {
+      "path": "TEST_RESULTS.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "VERSION",
+      "bytes": 13,
+      "sha256": "f41c2bcfe6773ce0fac0282f9bdb1cbd5245a623949d818c2b0766df6aca3c0f"
+    },
+    {
+      "path": "docs/DESIGN_REQUIREMENTS.md",
+      "bytes": 428,
+      "sha256": "14321ec4041a1b554417190ea91c24ce2254c76f064b2dfbe7021e6040e0d7d9"
+    },
+    {
+      "path": "docs/EVALUATION_PLAN.md",
+      "bytes": 360,
+      "sha256": "da54f6d5d5defefc72f7a62e5c11ba766abf839d02d1b7aa30960976b07b08d1"
+    },
+    {
+      "path": "docs/GOVERNANCE_RELEASE_GATE.md",
+      "bytes": 276,
+      "sha256": "54a0df901dd7ad0c73c15bdc2dfd353609413bbd35eb42824e2d5ce2607ef29e"
+    },
+    {
+      "path": "docs/OPEN_SOURCE_RELEASE_CHECKLIST.md",
+      "bytes": 437,
+      "sha256": "02175c53ec6f5e33a4a79ee9ea6a66d139f0868e656cbb58bdf99473a3be9464"
+    },
+    {
+      "path": "docs/SECURITY_CONTROL_MATRIX.md",
+      "bytes": 1237,
+      "sha256": "60fbb2291ab1315db493ed3c8d9123c9ae70a8d825cdd8e60454c7a6a21d3cb0"
+    },
+    {
+      "path": "docs/THREAT_MODEL.md",
+      "bytes": 904,
+      "sha256": "61c6a8f781836d1df02beb318e7dbcf98a0147c6728df91b47233c1b3f2107c3"
+    },
+    {
+      "path": "examples/context_segment_provenance_receipt.json",
+      "bytes": 467,
+      "sha256": "2f24edd96304c1086096d99223b208de447bdd7c5357eaaa82261c2a4f6e115e"
+    },
+    {
+      "path": "examples/output_policy.json",
+      "bytes": 207,
+      "sha256": "5a0ec692171c107a1400d5b190ce57f6eb32fd4970c6b1233367217b6090e0c0"
+    },
+    {
+      "path": "pyproject.toml",
+      "bytes": 477,
+      "sha256": "3de9dea3155319b03722423a587e6f398425b2f38fe2723cfba8d48a92d48a05"
+    },
+    {
+      "path": "schemas/context_segment.schema.json",
+      "bytes": 250,
+      "sha256": "81cab84d2ba6da5b23d763645b7d86466943ee2270681c95f473ded781d93c6d"
+    },
+    {
+      "path": "schemas/detector_result.schema.json",
+      "bytes": 288,
+      "sha256": "21fbe306932182739bf7ff52713b4815b4a27351c5fd9ce5efa52c97b7f149a7"
+    },
+    {
+      "path": "schemas/output_policy.schema.json",
+      "bytes": 308,
+      "sha256": "90b27f07d7bc75cb58534cc68705cf7b15ccdfaa2d973a210001e16efb02cd11"
+    },
+    {
+      "path": "schemas/tool_request.schema.json",
+      "bytes": 225,
+      "sha256": "52761277cc0f0ec743dd9a0d950ac4bebf8eb125cbd72218b3dda39cfea865b7"
+    },
+    {
+      "path": "src/aacp/__init__.py",
+      "bytes": 371,
+      "sha256": "f77645a70f3364b119cbceeb70358c5c61550ba8159d01ad32d0d21d2bca1d0e"
+    },
+    {
+      "path": "src/aacp/__pycache__/__init__.cpython-313.pyc",
+      "bytes": 708,
+      "sha256": "3169487157b2c01b42f9f49e7bb75e1fb2f5828637a69b0112a5a943a4be7afe"
+    },
+    {
+      "path": "src/aacp/__pycache__/audit.cpython-313.pyc",
+      "bytes": 1942,
+      "sha256": "1c0b70e83f79285bdd56c9e9490895b5154132652a2943d6652a5a9d54976dd7"
+    },
+    {
+      "path": "src/aacp/__pycache__/detector.cpython-313.pyc",
+      "bytes": 4328,
+      "sha256": "12ed1d5a09dfa22cbad8e7a7591c55bf9d4efbdaca091f41d974f10007e4bcf5"
+    },
+    {
+      "path": "src/aacp/__pycache__/gateway.cpython-313.pyc",
+      "bytes": 3455,
+      "sha256": "05ae1a81f5efc29553f4847b16494396a01a22742be69ccbf8be04699fa91d92"
+    },
+    {
+      "path": "src/aacp/__pycache__/policy.cpython-313.pyc",
+      "bytes": 2896,
+      "sha256": "dc0c4f29816c2b67da5593042c53f3b8555490e99cfbce739f92e2c4f8a0ab2e"
+    },
+    {
+      "path": "src/aacp/__pycache__/types.cpython-313.pyc",
+      "bytes": 10384,
+      "sha256": "2b27b2aa2e8c350dc457d9659a9fbc968743b0c2eb1fb6bc6ba515197de7b779"
+    },
+    {
+      "path": "src/aacp/audit.py",
+      "bytes": 560,
+      "sha256": "9188b6a7b8aed4afec8ccf971037ba2b470d6abae22d339369f1f49e9a5ec422"
+    },
+    {
+      "path": "src/aacp/detector.py",
+      "bytes": 3382,
+      "sha256": "2b0a58899536be4b1a13d8b58daff5632bf08ba8372f5b0a50eff848e2ada32c"
+    },
+    {
+      "path": "src/aacp/gateway.py",
+      "bytes": 1876,
+      "sha256": "ecc6de7df0f6e0ac084f20ff826edf7c46e85c81bf59b22042b8aea2c39366dd"
+    },
+    {
+      "path": "src/aacp/policy.py",
+      "bytes": 1728,
+      "sha256": "2126c9a9fba41ec98ae134183c0752a42b513449c124576675ba8e9331d59dbc"
+    },
+    {
+      "path": "src/aacp/types.py",
+      "bytes": 4787,
+      "sha256": "c195cee2686590d3e9b90908e7038bbe6e039761028e2c00daa31c4d6e40b739"
+    },
+    {
+      "path": "tests/__pycache__/test_aacp_public_release.cpython-313.pyc",
+      "bytes": 6740,
+      "sha256": "bde35dae5a657c8d4e63a6c0c23082c0d6b3e69f17ed6564d62e9ef317b50e5d"
+    },
+    {
+      "path": "tests/test_aacp_public_release.py",
+      "bytes": 2900,
+      "sha256": "3377cb8cce53d79913c6b9924e15c4c6f4953eb4d0bd5017425c0c3744e585ce"
+    }
+  ]
+}

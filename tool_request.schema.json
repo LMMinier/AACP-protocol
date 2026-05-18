@@ -1,0 +1,11 @@
+{
+  "title": "AACP ToolRequest",
+  "type": "object",
+  "required": [
+    "tool_name",
+    "sink",
+    "source_segment_ids",
+    "requested_by_authority_level"
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

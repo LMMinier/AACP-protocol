@@ -1,0 +1,14 @@
+{
+  "title": "AACP OutputPolicy",
+  "type": "object",
+  "required": [
+    "contains_code",
+    "contains_url",
+    "contains_tool_call",
+    "contains_secret",
+    "allowed_to_execute",
+    "allowed_to_send",
+    "requires_user_confirmation"
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

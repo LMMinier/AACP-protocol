@@ -1,0 +1,9 @@
+{
+  "contains_code": true,
+  "contains_url": false,
+  "contains_tool_call": true,
+  "contains_secret": false,
+  "allowed_to_execute": false,
+  "allowed_to_send": false,
+  "requires_user_confirmation": true
+}

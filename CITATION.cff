@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+title: "Authority-Aware Context Protocol (AACP)"
+message: "If you use AACP in research or engineering, please cite this release."
+type: software
+authors:
+  - family-names: Minier
+    given-names: Luis M.
+version: "0.1.0-public"
+date-released: "2026-05-18"
+abstract: "A schema-governed runtime protocol for making prompt-injection risk more observable, testable, containable, and auditable in LLM-integrated systems."
+license: Apache-2.0
+keywords:
+  - prompt injection
+  - AI security
+  - LLM agents
+  - authority boundaries
+  - tool-sink gateway
