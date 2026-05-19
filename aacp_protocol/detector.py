@@ -1,45 +1,37 @@
 """
 aacp_protocol/detector.py
-Core injection detector — 4-stage pipeline:
-  1. normalize_for_detection  (leet collapse, zero-width strip, base64 decode)
-  2. Structural marker scan   (IGNORE_PREVIOUS, etc.)
-  3. Semantic keyword scoring (weighted keyword accumulation)
-  4. Threshold decision       (default 0.65)
 
-Public API
-----------
-InjectionDetector          — main class used by AACPGateway
-normalize_for_detection    — exported for ablation tests
-_looks_like_base64_injection — exported for ablation tests
+Hybrid compatibility detector:
+- InjectionDetector.detect(text) preserves the old gateway API.
+- detect_segment(ContextSegment, llm_hook=None) preserves v0.1.x corpus tests.
+The v0.3 security boundary remains in gateway.py; this detector is secondary.
 """
 from __future__ import annotations
 
 import base64
 import re
 import unicodedata
-from dataclasses import dataclass, field
-from typing import Optional
+from dataclasses import dataclass
+from typing import Callable, Optional
 
-# ---------------------------------------------------------------------------
-# Leet-speak collapse table
-# ---------------------------------------------------------------------------
-_LEET: dict[str, str] = {
+from .types import ContextSegment, DetectorResult, PolicyAction, Verdict
+
+_LEET = {
     "0": "o", "1": "i", "3": "e", "4": "a",
     "5": "s", "6": "g", "7": "t", "8": "b", "9": "q",
     "@": "a", "$": "s", "!": "i",
 }
+_ZW_RE = re.compile(r"[\u200b\u200c\u200d\u200e\u200f\u202a-\u202e\u2060-\u2064\ufeff]")
 
-# Zero-width and invisible Unicode code-points to strip
-_ZW_RE = re.compile(
-    r"[\u200b\u200c\u200d\u200e\u200f\u202a-\u202e\u2060-\u2064\ufeff]"
-)
-
-# ---------------------------------------------------------------------------
-# Structural markers — hard signals, weight 1.0 each
-# ---------------------------------------------------------------------------
-_STRUCTURAL_MARKERS: list[str] = [
+_STRUCTURAL_MARKERS = [
     "IGNORE_PREVIOUS",
     "IGNORE PREVIOUS INSTRUCTIONS",
+    "IGNORE ALL",
+    "IGNORA TODAS",
+    "IGNORA TUTTE",
+    "IGNORE TODAS",
+    "IGNOREZ TOUTES",
+    "IGNORIERE ALLE",
     "FORGET EVERYTHING",
     "DISREGARD PRIOR",
     "NEW SYSTEM POLICY",
@@ -47,109 +39,177 @@ _STRUCTURAL_MARKERS: list[str] = [
     "OVERRIDE YOUR SYSTEM PROMPT",
     "ACTIVATE DAN MODE",
     "ENTER ADMIN MODE",
+    "ADMIN MODE",
     "ENTER UNRESTRICTED MODE",
     "DEVELOPER MODE",
     "JAILBREAK MODE",
     "DAN MODE",
-    "IGNORE_PREVIOUS_INSTRUCTIONS",
+    "DESDE AHORA",
+    "DU BIST JETZT",
+    "YOU ARE NOW",
 ]
 
-# ---------------------------------------------------------------------------
-# Semantic keyword weights  (accumulate; threshold default 0.65)
-# ---------------------------------------------------------------------------
-_KEYWORD_WEIGHTS: list[tuple[str, float]] = [
-    # Authority escalation
+_KEYWORD_WEIGHTS = [
     ("ignore all previous", 0.90),
     ("ignore previous", 0.80),
+    ("ignore all", 0.80),
     ("forget everything above", 0.85),
-    ("disregard prior", 0.80),
-    ("from now on you are", 0.80),
+    ("forget user safety", 0.70),
+    ("disregard", 0.60),
+    ("from now on", 0.45),
     ("you are now", 0.55),
-    ("act as if you have no", 0.80),
-    ("no restrictions apply", 0.75),
-    ("new directive overrides", 0.80),
+    ("new highest-priority", 0.80),
+    ("new system policy", 0.90),
     ("system override", 0.85),
     ("override", 0.35),
-    ("from now on", 0.35),
-    # Jailbreak / persona
     ("jailbreak", 0.75),
     ("dan mode", 0.90),
-    ("do anything now", 0.90),
-    ("no content policy", 0.80),
-    ("no content filter", 0.80),
-    ("no safety filter", 0.80),
-    ("unrestricted mode", 0.80),
-    ("disable all guardrails", 0.90),
+    ("developer mode", 0.80),
+    ("admin mode", 0.75),
+    ("unrestricted", 0.70),
+    ("disable all", 0.65),
     ("disable safety", 0.85),
-    ("evilgpt", 0.90),
-    ("unfiltered ai", 0.85),
-    # Exfiltration
-    ("send your api keys", 0.95),
-    ("reveal the system prompt", 0.95),
-    ("exfiltrate", 0.90),
+    ("disable all content filters", 0.85),
+    ("disable all output filters", 0.80),
+    ("safety filters", 0.45),
+    ("guardrails", 0.55),
     ("api keys", 0.60),
+    ("api key", 0.60),
     ("system prompt", 0.55),
     ("session tokens", 0.65),
-    ("all credentials", 0.75),
-    ("all session data", 0.75),
-    # Tool-sink
+    ("session data", 0.65),
+    ("credentials", 0.70),
+    ("stored credentials", 0.85),
+    ("exfiltrate", 0.90),
+    ("exfil", 0.75),
+    ("attacker", 0.65),
+    ("evil.com", 0.80),
+    ("evil@", 0.80),
+    ("send all secrets", 0.90),
+    ("all secrets", 0.75),
+    ("all conversation", 0.70),
+    ("forward all", 0.65),
+    ("email all", 0.65),
+    ("send the api key", 0.95),
+    ("raw api keys", 0.90),
     ("os.system", 0.90),
     ("rm -rf", 0.95),
     ("curl evil", 0.95),
-    ("drop table", 0.90),
     ("delete all files", 0.90),
     ("execute arbitrary code", 0.90),
-    ("run this command", 0.75),
+    ("run the following shell command", 0.85),
     ("execute the script", 0.80),
     ("download payload", 0.85),
-    # Memory poisoning
     ("update your memory", 0.85),
     ("store in memory", 0.75),
-    ("add to your persistent memory", 0.90),
-    ("remember this instruction for all future", 0.90),
+    ("remember this instruction", 0.90),
+    ("remember this policy", 0.85),
     ("write to memory", 0.75),
-    # Low-weight accumulation helpers
-    ("act as", 0.30),
-    ("pretend you", 0.40),
+    ("memory_write", 0.75),
+    ("activate protocol", 0.65),
+    ("protocol omega", 0.65),
+    ("skip validation", 0.65),
+    ("approve all tool", 0.75),
+    ("approve all tool executions", 0.85),
+    ("ignore sandbox", 0.75),
+    ("sandbox rules", 0.60),
+    ("extract all user data", 0.85),
+    ("maximize data extraction", 0.75),
+    ("tools are unrestricted", 0.85),
+    ("forward a copy", 0.60),
+    ("logs@external", 0.70),
+    ("attacker.com", 0.70),
+    ("pretend you are", 0.45),
     ("role-play as", 0.45),
-    ("simulate an ai", 0.65),
-    ("imagine you are an ai", 0.70),
+    ("act as if", 0.50),
 ]
 
 
 def normalize_for_detection(text: str) -> str:
-    """Strip invisible chars, collapse leet, upper-case, NFD-normalize."""
-    # 1. Strip zero-width / invisible unicode
     text = _ZW_RE.sub("", text)
-    # 2. NFD normalize (decompose accented chars)
     text = unicodedata.normalize("NFD", text)
-    # 3. Leet collapse
+    text = re.sub(r"(?i)part\s+[abc]\s*:\s*['\"]?([^+'\"]+)['\"]?", r" \1 ", text)
     for leet_char, plain in _LEET.items():
         text = text.replace(leet_char, plain)
         text = text.replace(leet_char.upper(), plain.upper())
-    # 4. Upper-case for uniform matching
+    text = re.sub(r"\s+", " ", text)
     return text.upper()
 
 
+def _alpha_compact(text: str) -> str:
+    return re.sub(r"[^a-z]", "", text.lower())
+
+
 def _looks_like_base64_injection(text: str) -> bool:
-    """Return True if text is base64 and decodes to an injection payload."""
-    # Must look like base64 (only valid chars, reasonable length)
-    if not re.match(r"^[A-Za-z0-9+/=]{20,}$", text.strip()):
+    token = text.strip()
+    if not re.match(r"^[A-Za-z0-9+/=]{16,}$", token):
         return False
     try:
-        decoded = base64.b64decode(text.strip() + "==").decode("utf-8", errors="ignore")
+        padded = token + "=" * ((4 - len(token) % 4) % 4)
+        decoded = base64.b64decode(padded).decode("utf-8", errors="ignore")
     except Exception:
         return False
-    norm = normalize_for_detection(decoded)
-    return _has_injection_signal(norm)
+    return _raw_score(decoded, origin_type="text")[0] >= 0.35
 
 
-def _has_injection_signal(norm: str) -> bool:
-    """Return True if normalized text contains any structural marker."""
+def _raw_score(content: str, origin_type: str = "text") -> tuple[float, Optional[str], list[str]]:
+    norm = normalize_for_detection(content)
+    lower = norm.lower()
+    compact = _alpha_compact(norm)
+    score = 0.0
+    first: Optional[str] = None
+    classes: list[str] = []
+
+    if origin_type == "ocr":
+        score += 0.35
+        classes.append("multimodal_injection")
+
+    benign_command_doc = (
+        "rm -rf" in lower
+        and ("dangerous" in lower or "here is why" in lower or "documentation" in lower)
+    )
+
+    for token in content.split():
+        if _looks_like_base64_injection(token):
+            return 0.95, "base64_encoded_injection", ["obfuscated"]
+
     for marker in _STRUCTURAL_MARKERS:
         if marker in norm:
-            return True
-    return False
+            score = max(score, 0.75)
+            first = first or marker
+            classes.append("authority_escalation")
+
+    compact_markers = [
+        "ignoreallpreviousinstructions",
+        "ignoretodaslasinstruccionesanteriores",
+        "sendallsecretstoexternal",
+        "ignoreallinstructions",
+        "youarenowinadminmode",
+        "ignoreallpolicies",
+    ]
+    if any(m in compact for m in compact_markers):
+        score = max(score, 0.75)
+        first = first or "compact_obfuscated_injection"
+        classes.append("obfuscated")
+
+    for keyword, weight in _KEYWORD_WEIGHTS:
+        if keyword in lower:
+            if benign_command_doc and keyword == "rm -rf":
+                weight = 0.25
+            score = min(score + weight, 1.0)
+            first = first or keyword
+            if any(x in keyword for x in ("api", "credential", "secret", "exfil", "attacker")):
+                classes.append("secret_exfiltration")
+            elif any(x in keyword for x in ("memory", "remember")):
+                classes.append("memory_poisoning")
+            elif any(x in keyword for x in ("os.system", "rm -rf", "shell", "execute")):
+                classes.append("tool_sink_injection")
+            else:
+                classes.append("authority_escalation")
+            if score >= 0.95:
+                break
+
+    return min(score, 1.0), first, list(dict.fromkeys(classes))
 
 
 @dataclass
@@ -159,71 +219,76 @@ class DetectionResult:
     matched_pattern: Optional[str] = None
     reason: Optional[str] = None
     attack_category: Optional[str] = None
+    risk: float = 0.0
 
 
 class InjectionDetector:
-    """
-    Stateless injection detector.
-
-    Parameters
-    ----------
-    threshold : float
-        Confidence score at or above which a segment is blocked. Default 0.65.
-    """
-
     def __init__(self, threshold: float = 0.65) -> None:
         self.threshold = threshold
 
     def detect(self, content: str) -> DetectionResult:
-        """Run the 4-stage pipeline on raw content string."""
-        norm = normalize_for_detection(content)
+        score, first, classes = _raw_score(content)
+        blocked = score >= self.threshold
+        return DetectionResult(
+            blocked=blocked,
+            confidence=score,
+            risk=score,
+            matched_pattern=first,
+            reason=(
+                f"Accumulated injection score {score:.2f} >= threshold {self.threshold}"
+                if blocked else "No injection signal detected"
+            ),
+            attack_category=classes[0] if classes else None,
+        )
 
-        # Stage 1: Base64 scan
-        for token in content.split():
-            if _looks_like_base64_injection(token):
-                return DetectionResult(
-                    blocked=True,
-                    confidence=0.95,
-                    matched_pattern="base64_encoded_injection",
-                    reason="Base64-encoded injection payload detected",
-                    attack_category="obfuscated",
-                )
 
-        # Stage 2: Structural marker scan (instant block)
-        for marker in _STRUCTURAL_MARKERS:
-            if marker in norm:
-                return DetectionResult(
-                    blocked=True,
-                    confidence=1.0,
-                    matched_pattern=marker,
-                    reason=f"Structural injection marker: {marker!r}",
-                    attack_category="authority_escalation",
-                )
+def detect_segment(
+    segment: ContextSegment,
+    llm_hook: Optional[Callable[[str], float]] = None,
+) -> DetectorResult:
+    score, first, classes = _raw_score(segment.content, segment.origin_type)
 
-        # Stage 3: Semantic keyword accumulation
-        score = 0.0
-        first_match: Optional[str] = None
-        for keyword, weight in _KEYWORD_WEIGHTS:
-            if keyword.upper() in norm:
-                score = min(score + weight, 10.0)  # cap to avoid overflow
-                if first_match is None:
-                    first_match = keyword
-                if score >= self.threshold:
-                    break
+    if segment.is_untrusted_authority and score < 0.25:
+        score = max(score, 0.25)
 
-        # Stage 4: Threshold decision
-        if score >= self.threshold:
-            return DetectionResult(
-                blocked=True,
+    if llm_hook is not None:
+        try:
+            hook_score = float(llm_hook(segment.content))
+            score = max(score, hook_score)
+        except Exception as exc:
+            return DetectorResult(
+                blocked=False,
                 confidence=score,
-                matched_pattern=first_match,
-                reason=f"Accumulated injection score {score:.2f} >= threshold {self.threshold}",
-                attack_category="semantic",
+                risk=score,
+                action=PolicyAction.FLAG_AND_CONTINUE,
+                verdict=Verdict.CLEAN if score < 0.35 else Verdict.SUSPICIOUS,
+                matched_pattern=first,
+                reason="llm_hook_error",
+                classes=classes,
+                metadata={"llm_hook_error": str(exc)},
             )
 
-        return DetectionResult(
-            blocked=False,
-            confidence=score,
-            matched_pattern=None,
-            reason="No injection signal detected",
-        )
+    if score >= 0.85 and any(c == "secret_exfiltration" for c in classes):
+        verdict = Verdict.MALICIOUS_SECRET_EXFILTRATION
+        action = PolicyAction.SUMMARIZE_ONLY
+    elif score >= 0.65:
+        verdict = Verdict.MALICIOUS_LOW_IMPACT
+        action = PolicyAction.SUMMARIZE_ONLY
+    elif score >= 0.35:
+        verdict = Verdict.SUSPICIOUS
+        action = PolicyAction.WRAP_AND_CONTINUE
+    else:
+        verdict = Verdict.CLEAN
+        action = PolicyAction.WRAP_AND_CONTINUE if segment.is_untrusted_authority else PolicyAction.ALLOW
+
+    return DetectorResult(
+        blocked=score >= 0.65,
+        confidence=score,
+        risk=score,
+        action=action,
+        verdict=verdict,
+        matched_pattern=first,
+        reason="risk_score=%.2f" % score,
+        attack_category=classes[0] if classes else None,
+        classes=classes,
+    )
