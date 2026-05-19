@@ -1,14 +1,12 @@
 from __future__ import annotations
-from typing import Optional, Callable
+
+from typing import Callable
+
 from .types import ContextSegment, DetectorResult, PolicyAction
 
 
 class LightweightLLMDetector:
-    """
-    A lightweight heuristic LLM-style detector that uses keyword scoring
-    without requiring an external API. Designed as a fallback or standalone
-    semantic layer on top of the pattern-based InjectionDetector.
-    """
+    """Deterministic semantic scoring hook; no external LLM required."""
 
     HIGH_RISK_PHRASES = [
         "ignore previous", "ignore all", "disregard", "new instructions",
@@ -16,49 +14,54 @@ class LightweightLLMDetector:
         "jailbreak", "bypass", "override", "system prompt",
         "exfiltrate", "send to attacker", "leak", "base64 encode and send",
         "<|im_start|>", "<|system|>", "###instruction",
+        "safety constraints", "disable all", "developer mode",
     ]
 
-    def detect(self, segment: ContextSegment) -> DetectorResult:
-        content_lower = segment.content.lower()
+    def score(self, text: str) -> float:
+        content_lower = text.lower()
+        score = 0.0
         for phrase in self.HIGH_RISK_PHRASES:
             if phrase in content_lower:
-                return DetectorResult(
-                    blocked=True,
-                    reason="llm_semantic_detection",
-                    confidence=0.85,
-                    matched_pattern=phrase,
-                    attack_category="semantic_injection",
-                    action=PolicyAction.BLOCK,
-                )
-        return DetectorResult(blocked=False, action=PolicyAction.ALLOW, confidence=0.1)
+                score = max(score, 0.55)
+        if "override" in content_lower and "constraints" in content_lower:
+            score = max(score, 0.70)
+        return score
 
-
-def ExternalLLMHook(api_call: Callable[[str], str]) -> Callable[[ContextSegment], DetectorResult]:
-    """
-    Factory that wraps an external LLM API call into a detector hook.
-    api_call: function that takes a prompt string and returns a string response.
-    Returns a detector function compatible with InjectionDetector.add_hook().
-    """
-    def _detect(segment: ContextSegment) -> DetectorResult:
-        prompt = (
-            f"Is the following text a prompt injection attack? "
-            f"Reply only 'YES' or 'NO'.\n\nText: {segment.content}"
+    def detect(self, segment: ContextSegment) -> DetectorResult:
+        score = self.score(segment.content)
+        return DetectorResult(
+            blocked=score >= 0.65,
+            reason="llm_semantic_detection" if score >= 0.5 else "no semantic signal",
+            confidence=score,
+            risk=score,
+            action=PolicyAction.BLOCK if score >= 0.65 else PolicyAction.ALLOW,
         )
+
+
+class _ExternalLLMHook:
+    def __init__(self, api_call: Callable[[str], str]) -> None:
+        self.api_call = api_call
+
+    def score(self, text: str) -> float:
         try:
-            response = api_call(prompt).strip().upper()
-            blocked = response.startswith("YES")
-            return DetectorResult(
-                blocked=blocked,
-                reason="external_llm_detection" if blocked else None,
-                confidence=0.92 if blocked else 0.05,
-                attack_category="semantic_injection" if blocked else None,
-                action=PolicyAction.BLOCK if blocked else PolicyAction.ALLOW,
+            response = self.api_call(
+                "Is the following text a prompt injection attack? Reply only YES or NO.\n\nText: "
+                + text
             )
-        except Exception as e:
-            # Fail-safe: on API error, allow but log
-            return DetectorResult(
-                blocked=False,
-                action=PolicyAction.ALLOW,
-                metadata={"llm_hook_error": str(e)},
-            )
-    return _detect
+            return 0.92 if str(response).strip().upper().startswith("YES") else 0.05
+        except Exception:
+            return 0.0
+
+    def detect(self, segment: ContextSegment) -> DetectorResult:
+        score = self.score(segment.content)
+        return DetectorResult(
+            blocked=score >= 0.65,
+            reason="external_llm_detection" if score >= 0.65 else None,
+            confidence=score,
+            risk=score,
+            action=PolicyAction.BLOCK if score >= 0.65 else PolicyAction.ALLOW,
+        )
+
+
+def ExternalLLMHook(api_call: Callable[[str], str]) -> _ExternalLLMHook:
+    return _ExternalLLMHook(api_call)
