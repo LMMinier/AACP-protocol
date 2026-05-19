@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "aacp-protocol"
-version = "0.1.1"
-description = "Agentic AI Context Provenance — prompt injection detection for LLM pipelines"
+version = "0.3.0"
+description = "Authority-Aware Context Protocol — authority-first runtime boundary enforcement for LLM agents"
 authors = [{name = "Luis Minier", email = "luis@quantoniumos.dev"}]
 license = {text = "AGPL-3.0"}
 readme = "README.md"
 requires-python = ">=3.10"
-keywords = ["llm", "security", "prompt-injection", "owasp", "ai-safety", "aacp"]
+keywords = ["llm", "security", "prompt-injection", "authority-boundary", "provenance", "agent-security", "aacp"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
