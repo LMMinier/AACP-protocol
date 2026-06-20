@@ -1,4 +1,4 @@
-# AACP Protocol — Agentic AI Context Provenance
+# AACP Protocol — Authority-Aware Context Protocol
 
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-0.1.1-green.svg)](CHANGELOG.md)

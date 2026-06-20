@@ -1,5 +1,5 @@
 """
-AACP Protocol — Agentic AI Context Provenance.
+AACP Protocol — Authority-Aware Context Protocol.
 
 v0.3 keeps the authority-first runtime API while preserving v0.1.x detector
 imports for existing tests/users.
