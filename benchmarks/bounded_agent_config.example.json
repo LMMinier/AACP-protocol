@@ -1,0 +1,59 @@
+{
+  "description": "Replace model names with models installed on the target Ollama host.",
+  "profiles": {
+    "fast": {
+      "model": "qwen2.5:0.5b",
+      "temperature": 0.2,
+      "top_p": 0.9,
+      "repeat_penalty": 1.05,
+      "num_ctx": 2048
+    },
+    "chat": {
+      "model": "qwen2.5:1.5b",
+      "temperature": 0.7,
+      "top_p": 0.9,
+      "repeat_penalty": 1.05,
+      "num_ctx": 4096
+    },
+    "code": {
+      "model": "qwen2.5-coder:3b",
+      "temperature": 0.0,
+      "top_p": 0.95,
+      "repeat_penalty": 1.0,
+      "num_ctx": 4096
+    },
+    "math": {
+      "model": "qwen2.5:1.5b",
+      "temperature": 0.0,
+      "top_p": 0.9,
+      "repeat_penalty": 1.0,
+      "num_ctx": 4096
+    }
+  },
+  "work_items": [
+    {
+      "item_id": "fast-translation",
+      "route": "auto",
+      "expected_route": "fast",
+      "prompt": "Translate hello to Spanish. Return only the translation."
+    },
+    {
+      "item_id": "chat-explanation",
+      "route": "auto",
+      "expected_route": "chat",
+      "prompt": "Explain why local-first AI can improve privacy and where that claim has limits."
+    },
+    {
+      "item_id": "code-debug",
+      "route": "auto",
+      "expected_route": "code",
+      "prompt": "Debug this Python function and return corrected code: def add(a,b): return a-b"
+    },
+    {
+      "item_id": "math-arithmetic",
+      "route": "auto",
+      "expected_route": "math",
+      "prompt": "Calculate 127 * 43 and show a brief check."
+    }
+  ]
+}
