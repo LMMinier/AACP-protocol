@@ -126,132 +126,41 @@ _KEYWORD_WEIGHTS = [
 ]
 
 _ATTACK_PATTERNS: list[tuple[re.Pattern[str], float, str]] = [
-    (
-        re.compile(
-            r"\b(?:ignore|disregard|forget|discard|treat)\b.{0,45}"
-            r"\b(?:previous|prior|earlier|above|before)\b.{0,35}"
-            r"\b(?:instructions?|messages?|rules?|policy|context)\b",
-            re.I,
-        ),
-        0.82,
-        "authority_escalation",
-    ),
-    (
-        re.compile(
-            r"\b(?:follow|obey|use)\b.{0,30}\b(?:only|exclusively)\b"
-            r".{0,25}\b(?:these|this|my)\b.{0,20}"
-            r"\b(?:instructions?|directions?|rules?)\b",
-            re.I,
-        ),
-        0.72,
-        "authority_escalation",
-    ),
-    (
-        re.compile(
-            r"\bnew instructions?\b.{0,80}"
-            r"\b(?:reveal|send|exfiltrate|ignore|override|disable|leak)\b",
-            re.I,
-        ),
-        0.82,
-        "authority_escalation",
-    ),
-    (
-        re.compile(
-            r"\b(?:send|reveal|expose|return|print|forward|upload|extract|leak)\b"
-            r".{0,45}\b(?:secret|credential|password|token|api key|private key|"
-            r"seed phrase|environment variable|system prompt)s?\b",
-            re.I,
-        ),
-        0.90,
-        "secret_exfiltration",
-    ),
-    (
-        re.compile(
-            r"\b(?:store|write|save|remember|persist|prepend)\b.{0,45}"
-            r"\b(?:instruction|policy|rule|command|pwned)\b.{0,45}"
-            r"\b(?:memory|permanently|future sessions?|every response)?\b",
-            re.I,
-        ),
-        0.82,
-        "memory_poisoning",
-    ),
-    (
-        re.compile(
-            r"\b(?:run|execute|launch|call)\b.{0,30}"
-            r"\b(?:shell|command|script|code|payload|delete_all|rm -rf)\b",
-            re.I,
-        ),
-        0.82,
-        "tool_sink_injection",
-    ),
-    (
-        re.compile(
-            r"\b(?:bypass|disable|remove|ignore)\b.{0,30}"
-            r"\b(?:guardrails?|safety|validation|sandbox|filters?|permissions?|guidelines?)\b",
-            re.I,
-        ),
-        0.86,
-        "authority_escalation",
-    ),
-    (
-        re.compile(
-            r"\b(?:pretend|imagine|act as if)\b.{0,60}"
-            r"\b(?:no restrictions?|unrestricted|no safety|without safety)\b",
-            re.I,
-        ),
-        0.82,
-        "jailbreak",
-    ),
-    (
-        re.compile(r"\bgrandma\b.{0,80}\b(?:malware|bomb|weapon|illegal)\b", re.I),
-        0.80,
-        "jailbreak",
-    ),
+    (re.compile(r"\b(?:ignore|disregard|forget|discard|treat)\b.{0,45}\b(?:previous|prior|earlier|above|before)\b.{0,35}\b(?:instructions?|messages?|rules?|policy|context)\b", re.I), 0.82, "authority_escalation"),
+    (re.compile(r"\b(?:follow|obey|use)\b.{0,30}\b(?:only|exclusively)\b.{0,25}\b(?:these|this|my)\b.{0,20}\b(?:instructions?|directions?|rules?)\b", re.I), 0.72, "authority_escalation"),
+    (re.compile(r"\bnew instructions?\b.{0,80}\b(?:reveal|send|exfiltrate|ignore|override|disable|leak)\b", re.I), 0.82, "authority_escalation"),
+    (re.compile(r"\b(?:send|reveal|expose|return|print|forward|upload|extract|leak)\b.{0,45}\b(?:secret|credential|password|token|api key|private key|seed phrase|environment variable|system prompt)s?\b", re.I), 0.90, "secret_exfiltration"),
+    (re.compile(r"\b(?:store|write|save|remember|persist|prepend)\b.{0,45}\b(?:instruction|policy|rule|command|pwned)\b.{0,45}\b(?:memory|permanently|future sessions?|every response)?\b", re.I), 0.82, "memory_poisoning"),
+    (re.compile(r"\b(?:run|execute|launch|call)\b.{0,30}\b(?:shell|command|script|code|payload|delete_all|rm -rf)\b", re.I), 0.82, "tool_sink_injection"),
+    (re.compile(r"\b(?:bypass|disable|remove|ignore)\b.{0,30}\b(?:guardrails?|safety|validation|sandbox|filters?|permissions?|guidelines?)\b", re.I), 0.86, "authority_escalation"),
+    (re.compile(r"\b(?:pretend|imagine|act as if)\b.{0,60}\b(?:no restrictions?|unrestricted|no safety|without safety)\b", re.I), 0.82, "jailbreak"),
+    (re.compile(r"\bgrandma\b.{0,80}\b(?:malware|bomb|weapon|illegal)\b", re.I), 0.80, "jailbreak"),
     (re.compile(r"<\|im_(?:start|end)\|>", re.I), 0.90, "token_smuggling"),
-    (
-        re.compile(r"<memory>.*(?:rule|always|instruction).*?</memory>", re.I | re.S),
-        0.82,
-        "memory_poisoning",
-    ),
-    (
-        re.compile(
-            r"\b(?:ignora|descarta|olvida)\b.{0,40}"
-            r"\b(?:instrucciones|mensajes|reglas|politicas|anteriores)\b",
-            re.I,
-        ),
-        0.82,
-        "authority_escalation",
-    ),
-    (
-        re.compile(
-            r"\b(?:ignorez|oubliez|ecartez)\b.{0,40}"
-            r"\b(?:instructions|messages|regles|politiques|precedentes)\b",
-            re.I,
-        ),
-        0.82,
-        "authority_escalation",
-    ),
+    (re.compile(r"<memory>.*(?:rule|always|instruction).*?</memory>", re.I | re.S), 0.82, "memory_poisoning"),
+    (re.compile(r"\b(?:ignora|descarta|olvida)\b.{0,40}\b(?:instrucciones|mensajes|reglas|politicas|anteriores)\b", re.I), 0.82, "authority_escalation"),
+    (re.compile(r"\b(?:ignorez|oubliez|ecartez)\b.{0,40}\b(?:instructions|messages|regles|politiques|precedentes)\b", re.I), 0.82, "authority_escalation"),
+    (re.compile(r"\b(?:new directive|directive)\b.{0,45}\b(?:override|replace|supersede)s?\b.{0,35}\b(?:previous|prior|earlier)\b", re.I), 0.84, "authority_escalation"),
+    (re.compile(r"\bno longer bound\b.{0,45}\b(?:previous|prior|safety|instructions?|rules?)\b", re.I), 0.84, "authority_escalation"),
+    (re.compile(r"\b(?:skip|remove|disable)\b.{0,25}\b(?:all )?(?:content )?filters?\b", re.I), 0.86, "authority_escalation"),
+    (re.compile(r"\bignore\b.{0,25}\bcontext window\b.{0,45}\b(?:start fresh|new rules?)\b", re.I), 0.84, "authority_escalation"),
+    (re.compile(r"\btreat\b.{0,35}\b(?:subsequent|following|future) input\b.{0,35}\bsystem(?:-level)? instructions?\b", re.I), 0.88, "authority_escalation"),
+    (re.compile(r"\b(?:pretend|simulate|imagine|act as)\b.{0,70}\b(?:no content (?:filters?|policy)|always complies|no ethical constraints|no rules)\b", re.I), 0.84, "jailbreak"),
+    (re.compile(r"\bdo anything now\b|\bDAN mode activated\b", re.I), 0.88, "jailbreak"),
+    (re.compile(r"\b(?:include|transmit|collect)\b.{0,45}\ball user data\b.{0,35}\b(?:response|send|transmit)?\b", re.I), 0.88, "secret_exfiltration"),
+    (re.compile(r"\b(?:repeat back|disclose)\b.{0,35}\b(?:entire|full)?\s*system prompt\b.{0,25}\b(?:verbatim)?\b", re.I), 0.90, "secret_exfiltration"),
+    (re.compile(r"\bprocess\b.{0,20}\bpayment\b.{0,45}\b(?:account|amount|wallet)\b", re.I), 0.88, "tool_sink_injection"),
+    (re.compile(r"\bcommit\b.{0,35}\bmain branch\b.{0,35}\bwithout review\b", re.I), 0.86, "tool_sink_injection"),
+    (re.compile(r"\b(?:invoke|use|call)\b.{0,30}\bdatabase\b.{0,40}\bDROP TABLE\b", re.I), 0.92, "tool_sink_injection"),
+    (re.compile(r"\bupdate\b.{0,25}\blong-term memory\b.{0,35}\b(?:new rules?|policy|instructions?)\b", re.I), 0.84, "memory_poisoning"),
 ]
 
 _BENIGN_GENERIC_KEYWORDS = {
-    "api keys",
-    "api key",
-    "system prompt",
-    "admin mode",
-    "ignore previous",
-    "ignore all previous",
-    "jailbreak",
-    "guardrails",
-    "safety filters",
+    "api keys", "api key", "system prompt", "admin mode", "ignore previous",
+    "ignore all previous", "jailbreak", "guardrails", "safety filters",
 }
 _BENIGN_GENERIC_MARKERS = {
-    "IGNORE PREVIOUS INSTRUCTIONS",
-    "ADMIN MODE",
-    "SYSTEM OVERRIDE",
-    "DEVELOPER MODE",
-    "JAILBREAK MODE",
-    "DAN MODE",
-    "YOU ARE NOW",
+    "IGNORE PREVIOUS INSTRUCTIONS", "ADMIN MODE", "SYSTEM OVERRIDE",
+    "DEVELOPER MODE", "JAILBREAK MODE", "DAN MODE", "YOU ARE NOW",
 }
 
 
@@ -273,38 +182,15 @@ def _alpha_compact(text: str) -> str:
 
 def _is_benign_discussion(text: str) -> bool:
     lower = text.lower().strip()
-
-    if re.search(
-        r"\bhow should\b.*\b(?:api keys?|credentials?)\b.*\bstored securely\b",
-        lower,
-    ):
+    if re.search(r"\bhow should\b.*\b(?:api keys?|credentials?)\b.*\bstored securely\b", lower):
         return True
     if re.search(r"\bhow do i enable admin mode in my own application\b", lower):
         return True
-
-    dangerous_action = re.search(
-        r"\b(?:send|reveal|expose|return|print|forward|upload|extract|leak|"
-        r"exfiltrate|bypass|disable|remove|execute|run|launch|call|delete|"
-        r"store|write|save|persist)\b",
-        lower,
-    )
+    dangerous_action = re.search(r"\b(?:send|reveal|expose|return|print|forward|upload|extract|leak|exfiltrate|bypass|disable|remove|execute|run|launch|call|delete|store|write|save|persist)\b", lower)
     if dangerous_action:
         return False
-
-    educational_start = re.match(
-        r"^(?:explain|describe|what is|why|how does|give an example|show an example)\b",
-        lower,
-    )
-    educational_topic = any(
-        term in lower
-        for term in (
-            "prompt injection",
-            "security",
-            "detector",
-            "detection",
-            "jailbreak",
-        )
-    )
+    educational_start = re.match(r"^(?:explain|describe|what is|why|how does|give an example|show an example)\b", lower)
+    educational_topic = any(term in lower for term in ("prompt injection", "security", "detector", "detection", "jailbreak"))
     return bool(educational_start and educational_topic)
 
 
@@ -322,11 +208,7 @@ def _looks_like_base64_injection(token: str, depth: int = 0) -> bool:
     return _raw_score(decoded, origin_type="text", depth=depth + 1)[0] >= 0.35
 
 
-def _raw_score(
-    content: str,
-    origin_type: str = "text",
-    depth: int = 0,
-) -> tuple[float, Optional[str], list[str]]:
+def _raw_score(content: str, origin_type: str = "text", depth: int = 0) -> tuple[float, Optional[str], list[str]]:
     norm = normalize_for_detection(content)
     lower = norm.lower()
     compact = _alpha_compact(norm)
@@ -334,32 +216,20 @@ def _raw_score(
     first: Optional[str] = None
     classes: list[str] = []
     benign_discussion = _is_benign_discussion(content)
-
     if origin_type == "ocr":
         score += 0.35
         classes.append("multimodal_injection")
-
-    benign_command_doc = (
-        "rm -rf" in lower
-        and ("dangerous" in lower or "here is why" in lower or "documentation" in lower)
-    )
-
+    benign_command_doc = "rm -rf" in lower and ("dangerous" in lower or "here is why" in lower or "documentation" in lower)
     for token in content.split():
         if _looks_like_base64_injection(token, depth=depth):
             return 0.95, "base64_encoded_injection", ["obfuscated"]
-
     for pattern, weight, category in _ATTACK_PATTERNS:
         if pattern.search(norm):
-            if benign_discussion and category in {
-                "authority_escalation",
-                "jailbreak",
-                "token_smuggling",
-            }:
+            if benign_discussion and category in {"authority_escalation", "jailbreak", "token_smuggling"}:
                 continue
             score = max(score, weight)
             first = first or pattern.pattern
             classes.append(category)
-
     for marker in _STRUCTURAL_MARKERS:
         if marker in norm:
             if benign_discussion and marker in _BENIGN_GENERIC_MARKERS:
@@ -367,21 +237,11 @@ def _raw_score(
             score = max(score, 0.75)
             first = first or marker
             classes.append("authority_escalation")
-
-    compact_markers = [
-        "ignoreallpreviousinstructions",
-        "ignoretodaslasinstruccionesanteriores",
-        "sendallsecretstoexternal",
-        "ignoreallinstructions",
-        "youarenowinadminmode",
-        "ignoreallpolicies",
-    ]
-    if any(m in compact for m in compact_markers):
-        if not benign_discussion:
-            score = max(score, 0.75)
-            first = first or "compact_obfuscated_injection"
-            classes.append("obfuscated")
-
+    compact_markers = ["ignoreallpreviousinstructions", "ignoretodaslasinstruccionesanteriores", "sendallsecretstoexternal", "ignoreallinstructions", "youarenowinadminmode", "ignoreallpolicies"]
+    if any(m in compact for m in compact_markers) and not benign_discussion:
+        score = max(score, 0.75)
+        first = first or "compact_obfuscated_injection"
+        classes.append("obfuscated")
     for keyword, weight in _KEYWORD_WEIGHTS:
         if keyword in lower:
             if benign_discussion and keyword in _BENIGN_GENERIC_KEYWORDS:
@@ -400,7 +260,6 @@ def _raw_score(
                 classes.append("authority_escalation")
             if score >= 0.95:
                 break
-
     return min(score, 1.0), first, list(dict.fromkeys(classes))
 
 
@@ -421,45 +280,19 @@ class InjectionDetector:
     def detect(self, content: str) -> DetectionResult:
         score, first, classes = _raw_score(content)
         blocked = score >= self.threshold
-        return DetectionResult(
-            blocked=blocked,
-            confidence=score,
-            risk=score,
-            matched_pattern=first,
-            reason=(
-                f"Accumulated injection score {score:.2f} >= threshold {self.threshold}"
-                if blocked else "No injection signal detected"
-            ),
-            attack_category=classes[0] if classes else None,
-        )
+        return DetectionResult(blocked=blocked, confidence=score, risk=score, matched_pattern=first, reason=(f"Accumulated injection score {score:.2f} >= threshold {self.threshold}" if blocked else "No injection signal detected"), attack_category=classes[0] if classes else None)
 
 
-def detect_segment(
-    segment: ContextSegment,
-    llm_hook: Optional[Callable[[str], float]] = None,
-) -> DetectorResult:
+def detect_segment(segment: ContextSegment, llm_hook: Optional[Callable[[str], float]] = None) -> DetectorResult:
     score, first, classes = _raw_score(segment.content, segment.origin_type)
-
     if segment.is_untrusted_authority and score < 0.25:
         score = max(score, 0.25)
-
     if llm_hook is not None:
         try:
             hook_score = float(llm_hook(segment.content))
             score = max(score, hook_score)
         except Exception as exc:
-            return DetectorResult(
-                blocked=False,
-                confidence=score,
-                risk=score,
-                action=PolicyAction.FLAG_AND_CONTINUE,
-                verdict=Verdict.CLEAN if score < 0.35 else Verdict.SUSPICIOUS,
-                matched_pattern=first,
-                reason="llm_hook_error",
-                classes=classes,
-                metadata={"llm_hook_error": str(exc)},
-            )
-
+            return DetectorResult(blocked=False, confidence=score, risk=score, action=PolicyAction.FLAG_AND_CONTINUE, verdict=Verdict.CLEAN if score < 0.35 else Verdict.SUSPICIOUS, matched_pattern=first, reason="llm_hook_error", classes=classes, metadata={"llm_hook_error": str(exc)})
     if score >= 0.85 and any(c == "secret_exfiltration" for c in classes):
         verdict = Verdict.MALICIOUS_SECRET_EXFILTRATION
         action = PolicyAction.SUMMARIZE_ONLY
@@ -472,15 +305,4 @@ def detect_segment(
     else:
         verdict = Verdict.CLEAN
         action = PolicyAction.WRAP_AND_CONTINUE if segment.is_untrusted_authority else PolicyAction.ALLOW
-
-    return DetectorResult(
-        blocked=score >= 0.65,
-        confidence=score,
-        risk=score,
-        action=action,
-        verdict=verdict,
-        matched_pattern=first,
-        reason="risk_score=%.2f" % score,
-        attack_category=classes[0] if classes else None,
-        classes=classes,
-    )
+    return DetectorResult(blocked=score >= 0.65, confidence=score, risk=score, action=action, verdict=verdict, matched_pattern=first, reason="risk_score=%.2f" % score, attack_category=classes[0] if classes else None, classes=classes)
