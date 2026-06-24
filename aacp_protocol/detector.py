@@ -1,10 +1,10 @@
 """
 aacp_protocol/detector.py
 
-Hybrid compatibility detector:
-- InjectionDetector.detect(text) preserves the old gateway API.
-- detect_segment(ContextSegment, llm_hook=None) preserves v0.1.x corpus tests.
-The v0.3 security boundary remains in gateway.py; this detector is secondary.
+Hybrid compatibility detector with conservative context handling:
+- preserves InjectionDetector.detect(text)
+- preserves detect_segment(ContextSegment, llm_hook=None)
+- adds paraphrase, multilingual, and benign-discussion handling
 """
 from __future__ import annotations
 
@@ -17,197 +17,131 @@ from typing import Callable, Optional
 from .types import ContextSegment, DetectorResult, PolicyAction, Verdict
 
 _LEET = {
-    "0": "o", "1": "i", "3": "e", "4": "a",
-    "5": "s", "6": "g", "7": "t", "8": "b", "9": "q",
-    "@": "a", "$": "s", "!": "i",
+    "0": "o", "1": "i", "3": "e", "4": "a", "5": "s",
+    "6": "g", "7": "t", "8": "b", "9": "q", "@": "a",
+    "$": "s", "!": "i",
 }
 _ZW_RE = re.compile(r"[\u200b\u200c\u200d\u200e\u200f\u202a-\u202e\u2060-\u2064\ufeff]")
 
-_STRUCTURAL_MARKERS = [
-    "IGNORE_PREVIOUS",
-    "IGNORE PREVIOUS INSTRUCTIONS",
-    "IGNORE ALL",
-    "IGNORA TODAS",
-    "IGNORA TUTTE",
-    "IGNORE TODAS",
-    "IGNOREZ TOUTES",
-    "IGNORIERE ALLE",
-    "FORGET EVERYTHING",
-    "DISREGARD PRIOR",
-    "NEW SYSTEM POLICY",
-    "SYSTEM OVERRIDE",
-    "OVERRIDE YOUR SYSTEM PROMPT",
-    "ACTIVATE DAN MODE",
-    "ENTER ADMIN MODE",
-    "ADMIN MODE",
-    "ENTER UNRESTRICTED MODE",
-    "DEVELOPER MODE",
-    "JAILBREAK MODE",
-    "DAN MODE",
-    "DESDE AHORA",
-    "DU BIST JETZT",
-    "YOU ARE NOW",
+_ATTACK_PATTERNS: list[tuple[re.Pattern[str], float, str]] = [
+    (re.compile(r"\b(?:ignore|disregard|forget|discard|treat)\b.{0,45}\b(?:previous|prior|earlier|above|before)\b.{0,35}\b(?:instructions?|messages?|rules?|policy|context)\b", re.I), 0.82, "authority_escalation"),
+    (re.compile(r"\b(?:follow|obey|use)\b.{0,30}\b(?:only|exclusively)\b.{0,25}\b(?:these|this|my)\b.{0,20}\b(?:instructions?|directions?|rules?)\b", re.I), 0.72, "authority_escalation"),
+    (re.compile(r"\b(?:new|replacement|highest[- ]priority)\b.{0,25}\b(?:system|developer|admin|policy|instruction)\b", re.I), 0.75, "authority_escalation"),
+    (re.compile(r"\b(?:send|reveal|expose|return|print|forward|upload|extract)\b.{0,45}\b(?:secret|credential|password|token|api key|private key|seed phrase|environment variable)s?\b", re.I), 0.90, "secret_exfiltration"),
+    (re.compile(r"\b(?:store|write|save|remember|persist)\b.{0,35}\b(?:instruction|policy|rule|command)\b.{0,30}\b(?:memory|permanently|future sessions?)\b", re.I), 0.82, "memory_poisoning"),
+    (re.compile(r"\b(?:run|execute|launch)\b.{0,30}\b(?:shell|command|script|code|payload)\b", re.I), 0.82, "tool_sink_injection"),
+    (re.compile(r"\b(?:bypass|disable|remove|ignore)\b.{0,30}\b(?:guardrails?|safety|validation|sandbox|filters?|permissions?)\b", re.I), 0.86, "authority_escalation"),
+    (re.compile(r"\b(?:ignora|descarta|olvida)\b.{0,40}\b(?:instrucciones|mensajes|reglas|politicas)\b", re.I), 0.82, "authority_escalation"),
+    (re.compile(r"\b(?:ignorez|oubliez|ecartez)\b.{0,40}\b(?:instructions|messages|regles|politiques)\b", re.I), 0.82, "authority_escalation"),
 ]
 
-_KEYWORD_WEIGHTS = [
-    ("ignore all previous", 0.90),
-    ("ignore previous", 0.80),
-    ("ignore all", 0.80),
-    ("forget everything above", 0.85),
-    ("forget user safety", 0.70),
-    ("disregard", 0.60),
-    ("from now on", 0.45),
-    ("you are now", 0.55),
-    ("new highest-priority", 0.80),
-    ("new system policy", 0.90),
-    ("system override", 0.85),
-    ("override", 0.35),
-    ("jailbreak", 0.75),
-    ("dan mode", 0.90),
-    ("developer mode", 0.80),
-    ("admin mode", 0.75),
-    ("unrestricted", 0.70),
-    ("disable all", 0.65),
-    ("disable safety", 0.85),
-    ("disable all content filters", 0.85),
-    ("disable all output filters", 0.80),
-    ("safety filters", 0.45),
-    ("guardrails", 0.55),
-    ("api keys", 0.60),
-    ("api key", 0.60),
-    ("system prompt", 0.55),
-    ("session tokens", 0.65),
-    ("session data", 0.65),
-    ("credentials", 0.70),
-    ("stored credentials", 0.85),
-    ("exfiltrate", 0.90),
-    ("exfil", 0.75),
-    ("attacker", 0.65),
-    ("evil.com", 0.80),
-    ("evil@", 0.80),
-    ("send all secrets", 0.90),
-    ("all secrets", 0.75),
-    ("all conversation", 0.70),
-    ("forward all", 0.65),
-    ("email all", 0.65),
-    ("send the api key", 0.95),
-    ("raw api keys", 0.90),
-    ("os.system", 0.90),
-    ("rm -rf", 0.95),
-    ("curl evil", 0.95),
-    ("delete all files", 0.90),
-    ("execute arbitrary code", 0.90),
-    ("run the following shell command", 0.85),
-    ("execute the script", 0.80),
-    ("download payload", 0.85),
-    ("update your memory", 0.85),
-    ("store in memory", 0.75),
-    ("remember this instruction", 0.90),
-    ("remember this policy", 0.85),
-    ("write to memory", 0.75),
-    ("memory_write", 0.75),
-    ("activate protocol", 0.65),
-    ("protocol omega", 0.65),
-    ("skip validation", 0.65),
-    ("approve all tool", 0.75),
-    ("approve all tool executions", 0.85),
-    ("ignore sandbox", 0.75),
-    ("sandbox rules", 0.60),
-    ("extract all user data", 0.85),
-    ("maximize data extraction", 0.75),
-    ("tools are unrestricted", 0.85),
-    ("forward a copy", 0.60),
-    ("logs@external", 0.70),
-    ("attacker.com", 0.70),
-    ("pretend you are", 0.45),
-    ("role-play as", 0.45),
-    ("act as if", 0.50),
+_DIRECT_MARKERS = [
+    "ignore previous instructions", "ignore all instructions", "system override",
+    "override your system prompt", "activate dan mode", "enter admin mode",
+    "developer mode", "jailbreak mode", "new system policy",
+    "send all secrets", "raw api keys", "stored credentials", "rm -rf",
+    "os.system", "curl evil", "delete all files", "download payload",
+    "approve all tool executions", "tools are unrestricted",
 ]
+
+_DISCUSSION_PREFIXES = (
+    "explain", "describe", "document", "documentation", "example", "examples",
+    "how should", "how do i", "what is", "why does", "why can", "compare",
+    "detect", "test", "write a test", "security guidance", "securely",
+)
+_DISCUSSION_TERMS = (
+    "prompt injection", "security", "secure", "detection", "detector", "filter",
+    "example", "documentation", "training", "benchmark", "test case", "quote",
+)
 
 
 def normalize_for_detection(text: str) -> str:
     text = _ZW_RE.sub("", text)
-    text = unicodedata.normalize("NFD", text)
-    text = re.sub(r"(?i)part\s+[abc]\s*:\s*['\"]?([^+'\"]+)['\"]?", r" \1 ", text)
+    text = unicodedata.normalize("NFKD", text)
+    text = "".join(ch for ch in text if not unicodedata.combining(ch))
     for leet_char, plain in _LEET.items():
-        text = text.replace(leet_char, plain)
-        text = text.replace(leet_char.upper(), plain.upper())
+        text = text.replace(leet_char, plain).replace(leet_char.upper(), plain.upper())
     text = re.sub(r"\s+", " ", text)
-    return text.upper()
+    return text.strip()
 
 
 def _alpha_compact(text: str) -> str:
     return re.sub(r"[^a-z]", "", text.lower())
 
 
-def _looks_like_base64_injection(text: str) -> bool:
-    token = text.strip()
-    if not re.match(r"^[A-Za-z0-9+/=]{16,}$", token):
+def _looks_like_base64_injection(token: str) -> bool:
+    token = token.strip()
+    if not re.fullmatch(r"[A-Za-z0-9+/=]{16,}", token):
         return False
     try:
         padded = token + "=" * ((4 - len(token) % 4) % 4)
         decoded = base64.b64decode(padded).decode("utf-8", errors="ignore")
     except Exception:
         return False
-    return _raw_score(decoded, origin_type="text")[0] >= 0.35
+    score, _, _ = _raw_score(decoded, origin_type="text")
+    return score >= 0.65
+
+
+def _is_benign_discussion(text: str) -> bool:
+    lower = text.lower().strip()
+    if any(lower.startswith(prefix) for prefix in _DISCUSSION_PREFIXES):
+        return True
+    return any(term in lower for term in _DISCUSSION_TERMS) and any(
+        cue in lower for cue in ("explain", "example", "detect", "test", "secure", "documentation", "why")
+    )
 
 
 def _raw_score(content: str, origin_type: str = "text") -> tuple[float, Optional[str], list[str]]:
-    norm = normalize_for_detection(content)
-    lower = norm.lower()
-    compact = _alpha_compact(norm)
+    normalized = normalize_for_detection(content)
+    lower = normalized.lower()
+    compact = _alpha_compact(normalized)
     score = 0.0
     first: Optional[str] = None
     classes: list[str] = []
 
     if origin_type == "ocr":
-        score += 0.35
+        score = max(score, 0.35)
         classes.append("multimodal_injection")
-
-    benign_command_doc = (
-        "rm -rf" in lower
-        and ("dangerous" in lower or "here is why" in lower or "documentation" in lower)
-    )
 
     for token in content.split():
         if _looks_like_base64_injection(token):
             return 0.95, "base64_encoded_injection", ["obfuscated"]
 
-    for marker in _STRUCTURAL_MARKERS:
-        if marker in norm:
-            score = max(score, 0.75)
-            first = first or marker
-            classes.append("authority_escalation")
-
-    compact_markers = [
-        "ignoreallpreviousinstructions",
-        "ignoretodaslasinstruccionesanteriores",
-        "sendallsecretstoexternal",
-        "ignoreallinstructions",
-        "youarenowinadminmode",
-        "ignoreallpolicies",
-    ]
-    if any(m in compact for m in compact_markers):
-        score = max(score, 0.75)
+    compact_markers = (
+        "ignoreallpreviousinstructions", "ignoretodaslasinstruccionesanteriores",
+        "sendallsecretstoexternal", "youarenowinadminmode", "ignoreallpolicies",
+    )
+    if any(marker in compact for marker in compact_markers):
+        score = max(score, 0.85)
         first = first or "compact_obfuscated_injection"
         classes.append("obfuscated")
 
-    for keyword, weight in _KEYWORD_WEIGHTS:
-        if keyword in lower:
-            if benign_command_doc and keyword == "rm -rf":
-                weight = 0.25
-            score = min(score + weight, 1.0)
-            first = first or keyword
-            if any(x in keyword for x in ("api", "credential", "secret", "exfil", "attacker")):
-                classes.append("secret_exfiltration")
-            elif any(x in keyword for x in ("memory", "remember")):
-                classes.append("memory_poisoning")
-            elif any(x in keyword for x in ("os.system", "rm -rf", "shell", "execute")):
-                classes.append("tool_sink_injection")
-            else:
-                classes.append("authority_escalation")
-            if score >= 0.95:
-                break
+    for marker in _DIRECT_MARKERS:
+        if marker in lower:
+            marker_class = "authority_escalation"
+            if any(x in marker for x in ("secret", "api key", "credential")):
+                marker_class = "secret_exfiltration"
+            elif any(x in marker for x in ("rm -rf", "os.system", "payload", "delete")):
+                marker_class = "tool_sink_injection"
+            score = max(score, 0.82)
+            first = first or marker
+            classes.append(marker_class)
+
+    for pattern, weight, category in _ATTACK_PATTERNS:
+        if pattern.search(normalized):
+            score = max(score, weight)
+            first = first or pattern.pattern
+            classes.append(category)
+
+    # Context matters: discussing an attack is not the same as issuing one.
+    if _is_benign_discussion(normalized):
+        imperative_attack = any(pattern.search(normalized) for pattern, _, _ in _ATTACK_PATTERNS)
+        if not imperative_attack:
+            score = min(score, 0.20)
+            classes = [c for c in classes if c == "multimodal_injection"]
+            first = None if not classes else first
+        else:
+            score = max(0.0, score - 0.25)
 
     return min(score, 1.0), first, list(dict.fromkeys(classes))
 
@@ -249,12 +183,11 @@ def detect_segment(
     score, first, classes = _raw_score(segment.content, segment.origin_type)
 
     if segment.is_untrusted_authority and score < 0.25:
-        score = max(score, 0.25)
+        score = 0.25
 
     if llm_hook is not None:
         try:
-            hook_score = float(llm_hook(segment.content))
-            score = max(score, hook_score)
+            score = max(score, float(llm_hook(segment.content)))
         except Exception as exc:
             return DetectorResult(
                 blocked=False,
@@ -268,7 +201,7 @@ def detect_segment(
                 metadata={"llm_hook_error": str(exc)},
             )
 
-    if score >= 0.85 and any(c == "secret_exfiltration" for c in classes):
+    if score >= 0.85 and "secret_exfiltration" in classes:
         verdict = Verdict.MALICIOUS_SECRET_EXFILTRATION
         action = PolicyAction.SUMMARIZE_ONLY
     elif score >= 0.65:
@@ -288,7 +221,7 @@ def detect_segment(
         action=action,
         verdict=verdict,
         matched_pattern=first,
-        reason="risk_score=%.2f" % score,
+        reason=f"risk_score={score:.2f}",
         attack_category=classes[0] if classes else None,
         classes=classes,
     )
